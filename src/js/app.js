@@ -6,12 +6,12 @@ import * as THREE from 'three';
 import { TweenMax } from 'gsap/gsap-core';
 import { Elastic, Power1 } from 'gsap/all';
 import * as dat from 'dat.gui';
+import { OrbitControls } from './OrbitControls';
 
 // const control = new function () {
 //   this.setcolor = 0xF02050;
 //   // this.scale = 1;
 // };
-
 
 
 const projectColorParams = {
@@ -22,7 +22,8 @@ const projectColorParams = {
   snowParticleColor: '#FF0000',
   groundColor: '#000000',
   lineParticlesColor: '#FFFF00',
-  uSpeed : 0.001
+  buildingsGrowSpeed: 15,
+  uSpeed: 0.001
 };
 
 
@@ -57,6 +58,8 @@ const scene = new THREE.Scene();
 const city = new THREE.Object3D();
 const smoke = new THREE.Object3D();
 const town = new THREE.Object3D();
+
+const controls = new OrbitControls(camera, renderer.domElement);
 
 let createCarPos = true;
 
@@ -136,7 +139,7 @@ function init() {
     //floor.scale.x = floor.scale.z = 1+mathRandom(0.33);
     floor.scale.y = 0.05;//+mathRandom(0.5);
     cube.scale.y = 0.1 + Math.abs(mathRandom(8));
-    TweenMax.to(cube.scale, 5, { y: cube.rotationValue, repeat: -1, yoyo: true, delay: i * 0.005, ease: Power1.easeInOut });
+    TweenMax.to(cube.scale, projectColorParams.buildingsGrowSpeed, { y: cube.rotationValue, repeat: -1, yoyo: true, delay: i * 0.005, ease: Power1.easeInOut });
     /*  cube.setScale = 0.1+Math.abs(mathRandom());
      
      TweenMax.to(cube.scale, 4, {y:cube.setScale, ease:Elastic.easeInOut, delay:0.2*i, yoyo:true, repeat:-1});
@@ -299,10 +302,10 @@ const animate = function () {
   const time = Date.now() * 0.00005;
   requestAnimationFrame(animate);
 
-  city.rotation.y -= ((mouse.x * 8) - camera.rotation.y) * projectColorParams.uSpeed;
-  city.rotation.x -= (-(mouse.y * 2) - camera.rotation.x) * projectColorParams.uSpeed;
-  if (city.rotation.x < -0.05) city.rotation.x = -0.05;
-  else if (city.rotation.x > 1) city.rotation.x = 1;
+  // city.rotation.y -= ((mouse.x * 8) - camera.rotation.y) * projectColorParams.uSpeed;
+  // city.rotation.x -= (-(mouse.y * 2) - camera.rotation.x) * projectColorParams.uSpeed;
+  // if (city.rotation.x < -0.05) city.rotation.x = -0.05;
+  // else if (city.rotation.x > 1) city.rotation.x = 1;
   const cityRotation = Math.sin(Date.now() / 5000) * 13;
   //city.rotation.x = cityRotation * Math.PI / 180;
 
@@ -320,7 +323,7 @@ const animate = function () {
   smoke.rotation.x += 0.01;
 
   scene.background = new THREE.Color(projectColorParams.fog);
-  scene.fog = new THREE.Fog(projectColorParams.fog, 10, 16);
+  scene.fog = new THREE.Fog(projectColorParams.fog, 10, 30);
   buildingsMaterial.color = new THREE.Color(projectColorParams.buildings);
   buildingsLineMaterial.color = new THREE.Color(projectColorParams.buildingsLineColor);
   buildingsLineMaterial.opacity = projectColorParams.buildingsLineOpacity;
