@@ -2,26 +2,22 @@ if (module.hot) {
   module.hot.accept();
 }
 
-import * as THREE from 'three';
-import { TweenMax } from 'gsap/gsap-core';
-import { Elastic, Power1 } from 'gsap/all';
 import * as dat from 'dat.gui';
+import { Power1 } from 'gsap/all';
+import { TweenMax } from 'gsap/gsap-core';
+import * as THREE from 'three';
 import { OrbitControls } from './OrbitControls';
-
-// const control = new function () {
-//   this.setcolor = 0xF02050;
-//   // this.scale = 1;
-// };
+import { mathRandom } from './utils/number';
 
 
-const projectColorParams = {
-  fog: "#FF6F48",
-  buildings: "#020205",
-  buildingsLineColor: "#8382AB",
-  buildingsLineOpacity: 0.02,
+const projectVariables = {
+  fogColor: "#FF6F48",
+  buildingsColor: "#020205",
+  buildingsWireframeColor: "#8382AB",
+  buildingsWireframeOpacity: 0.02,
   snowParticleColor: '#FFFFFF',
-  groundColor: '#020205',
   lineParticlesColor: '#FFFFFF',
+  groundColor: '#020205',
   buildingsGrowSpeed: 15,
   uSpeed: 0.001
 };
@@ -30,53 +26,100 @@ const projectColorParams = {
 // Three JS Template
 //----------------------------------------------------------------- BASIC parameters
 const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setSize(window.innerWidth, window.innerHeight);
-
-if (window.innerWidth > 800) {
-  renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-  renderer.shadowMap.needsUpdate = true;
-  //renderer.toneMapping = THREE.ReinhardToneMapping;
-  //console.log(window.innerWidth);
-};
-//---
-
-document.body.appendChild(renderer.domElement);
-
-window.addEventListener('resize', onWindowResize, false);
-function onWindowResize() {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-};
-
 const camera = new THREE.PerspectiveCamera(20, window.innerWidth / window.innerHeight, 1, 500);
 
-camera.position.set(0, 2, 14);
+const controls = new OrbitControls(camera, renderer.domElement);
 
 const scene = new THREE.Scene();
 const city = new THREE.Object3D();
 const smoke = new THREE.Object3D();
 const town = new THREE.Object3D();
 
-const controls = new OrbitControls(camera, renderer.domElement);
+const buildingsColorMaterial = new THREE.MeshStandardMaterial({
+  color: projectVariables.buildingsColor,
+  wireframe: false,
+  //opacity:0.9,
+  //transparent:true,
+  //roughness: 0.3,
+  //metalness: 1,
+  shading: THREE.SmoothShading,
+  //shading:THREE.FlatShading,
+  side: THREE.DoubleSide
+});
+const buildingsWireframeMaterial = new THREE.MeshLambertMaterial({
+  color: projectVariables.buildingsWireframeColor,
+  wireframe: true,
+  transparent: true,
+  opacity: projectVariables.buildingsWireframeOpacity,
+  // shading:THREE.FlatShading,
+  side: THREE.DoubleSide
+});
+
+const groundMaterial = new THREE.MeshPhongMaterial({
+  color: projectVariables.groundColor,
+  side: THREE.DoubleSide,
+  roughness: 10,
+  metalness: 0.6,
+  opacity: 0.9,
+  transparent: true
+});
+const groundGeometry = new THREE.PlaneGeometry(60, 60);
+const groundMesh = new THREE.Mesh(groundGeometry, groundMaterial);
+
+
+const snowMaterial = new THREE.MeshToonMaterial({
+  color: projectVariables.snowParticleColor,
+  side: THREE.DoubleSide
+});
+const snowGeometry = new THREE.CircleGeometry(0.01, 3);
+
+
+
+const setUpRenderer = () => {
+  renderer.setSize(window.innerWidth, window.innerHeight);
+
+  if (window.innerWidth > 800) {
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.shadowMap.needsUpdate = true;
+    renderer.toneMapping = THREE.ReinhardToneMapping;
+  };
+
+  document.body.appendChild(renderer.domElement);
+
+  window.addEventListener('resize', onWindowResize, false);
+  function onWindowResize() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  };
+};
+const setUpScene = () => {
+  scene.background = new THREE.Color(projectVariables.fogColor);
+  scene.fog = new THREE.Fog(projectVariables.fogColor, 10, 16);
+  // scene.fog = new THREE.FogExp2(projectVariables.fogColor, 0.05);
+};
+const setUpCamera = () => {
+  camera.position.set(0, 5, 20);
+};
+const setUpGround = () => {
+  groundMesh.rotation.x = -90 * Math.PI / 180;
+  groundMesh.position.y = -0.001;
+  groundMesh.receiveShadow = true;
+  // groundMesh.material.emissive.setHex(0xFFFFFF + Math.random() * 100000);
+};
+
+setUpRenderer();
+setUpScene();
+setUpCamera();
+setUpGround();
 
 let createCarPos = true;
 
-//----------------------------------------------------------------- FOG background
 
-// let setcolor = 0xF02050;
-//var setcolor = 0xF2F111;
-//var setcolor = 0xFF6347;
 
-scene.background = new THREE.Color(projectColorParams.fog);
-scene.fog = new THREE.Fog(projectColorParams.fog, 10, 16);
-//scene.fog = new THREE.FogExp2(setcolor, 0.05);
-//----------------------------------------------------------------- RANDOM Function
-function mathRandom(num = 8) {
-  var numValue = - Math.random() * num + Math.random() * num;
-  return numValue;
-};
+
+
 //----------------------------------------------------------------- CHANGE bluilding colors
 // let setTintNum = true;
 // function setTintColor() {
@@ -93,43 +136,19 @@ function mathRandom(num = 8) {
 // };
 
 //----------------------------------------------------------------- CREATE City
-const buildingsMaterial = new THREE.MeshStandardMaterial({
-  color: projectColorParams.buildings,
-  wireframe: false,
-  //opacity:0.9,
-  //transparent:true,
-  //roughness: 0.3,
-  //metalness: 1,
-  shading: THREE.SmoothShading,
-  //shading:THREE.FlatShading,
-  side: THREE.DoubleSide
-});
-const buildingsLineMaterial = new THREE.MeshLambertMaterial({
-  color: projectColorParams.buildingsLineColor,
-  wireframe: true,
-  transparent: true,
-  opacity: projectColorParams.buildingsLineOpacity,
-  side: THREE.DoubleSide/*,
-  shading:THREE.FlatShading*/});
-const gmaterial = new THREE.MeshToonMaterial({ color: projectColorParams.snowParticleColor, side: THREE.DoubleSide });
-const pmaterial = new THREE.MeshPhongMaterial({
-  color: projectColorParams.groundColor,
-  side: THREE.DoubleSide,
-  roughness: 10,
-  metalness: 0.6,
-  opacity: 0.9,
-  transparent: true
-});
+
+
+
 
 function init() {
   let segments = 2;
   for (let i = 1; i < 100; i++) {
     const geometry = new THREE.BoxGeometry(1, 1, 1, segments, segments, segments);
 
-    const cube = new THREE.Mesh(geometry, buildingsMaterial);
-    const wire = new THREE.Mesh(geometry, buildingsLineMaterial);
-    const floor = new THREE.Mesh(geometry, buildingsMaterial);
-    const wfloor = new THREE.Mesh(geometry, buildingsLineMaterial);
+    const cube = new THREE.Mesh(geometry, buildingsColorMaterial);
+    const wire = new THREE.Mesh(geometry, buildingsWireframeMaterial);
+    const floor = new THREE.Mesh(geometry, buildingsColorMaterial);
+    const wfloor = new THREE.Mesh(geometry, buildingsWireframeMaterial);
 
     cube.add(wfloor);
     cube.castShadow = true;
@@ -139,7 +158,7 @@ function init() {
     //floor.scale.x = floor.scale.z = 1+mathRandom(0.33);
     floor.scale.y = 0.05;//+mathRandom(0.5);
     cube.scale.y = 0.1 + Math.abs(mathRandom(8));
-    TweenMax.to(cube.scale, projectColorParams.buildingsGrowSpeed, { y: cube.rotationValue, repeat: -1, yoyo: true, delay: i * 0.005, ease: Power1.easeInOut });
+    TweenMax.to(cube.scale, projectVariables.buildingsGrowSpeed, { y: cube.rotationValue, repeat: -1, yoyo: true, delay: i * 0.005, ease: Power1.easeInOut });
     /*  cube.setScale = 0.1+Math.abs(mathRandom());
      
      TweenMax.to(cube.scale, 4, {y:cube.setScale, ease:Elastic.easeInOut, delay:0.2*i, yoyo:true, repeat:-1});
@@ -158,37 +177,33 @@ function init() {
   };
   //----------------------------------------------------------------- Particular
 
-  const gparticular = new THREE.CircleGeometry(0.01, 3);
   const aparticular = 5;
 
   for (let h = 1; h < 300; h++) {
-    const particular = new THREE.Mesh(gparticular, gmaterial);
+    const particular = new THREE.Mesh(snowGeometry, snowMaterial);
     particular.position.set(mathRandom(aparticular), mathRandom(aparticular), mathRandom(aparticular));
     particular.rotation.set(mathRandom(), mathRandom(), mathRandom());
     smoke.add(particular);
   };
 
-  const pgeometry = new THREE.PlaneGeometry(60, 60);
-  const pelement = new THREE.Mesh(pgeometry, pmaterial);
-  pelement.rotation.x = -90 * Math.PI / 180;
-  pelement.position.y = -0.001;
-  pelement.receiveShadow = true;
-  //pelement.material.emissive.setHex(0xFFFFFF + Math.random() * 100000);
 
-  city.add(pelement);
+
+  city.add(groundMesh);
   addVariableControls();
 };
 
 function addVariableControls() {
   var gui = new dat.GUI();
-  gui.addColor(projectColorParams, 'fog');
-  gui.addColor(projectColorParams, 'buildings');
-  gui.addColor(projectColorParams, 'buildingsLineColor');
-  gui.add(projectColorParams, 'buildingsLineOpacity', 0, 1, 0.01);
+  gui.addColor(projectVariables, 'fogColor');
+  gui.addColor(projectVariables, 'buildingsColor');
+  gui.addColor(projectVariables, 'buildingsWireframeColor');
+  gui.add(projectVariables, 'buildingsWireframeOpacity', 0, 1, 0.01);
 
-  gui.addColor(projectColorParams, 'snowParticleColor');
-  gui.addColor(projectColorParams, 'groundColor');
-  gui.addColor(projectColorParams, 'lineParticlesColor');
+  gui.addColor(projectVariables, 'snowParticleColor');
+  gui.addColor(projectVariables, 'lineParticlesColor');
+
+  gui.addColor(projectVariables, 'groundColor');
+
 }
 
 //----------------------------------------------------------------- MOUSE function
@@ -256,7 +271,7 @@ const generateCar = function () {
 };
 //----------------------------------------------------------------- LINES world
 
-const cMat = new THREE.MeshToonMaterial({ color: projectColorParams.lineParticlesColor, side: THREE.DoubleSide });
+const cMat = new THREE.MeshToonMaterial({ color: projectVariables.lineParticlesColor, side: THREE.DoubleSide });
 
 const createCars = function (cScale = 2, cPos = 20) {
   const cGeo = new THREE.BoxGeometry(1, cScale / 40, cScale / 40);
@@ -319,17 +334,23 @@ const animate = function () {
     //object.rotation.z = (Math.cos((time/object.rotationValue) * Math.PI / 180) * 180);
   }
 
+
+
+  scene.background = new THREE.Color(projectVariables.fogColor);
+  scene.fog = new THREE.Fog(projectVariables.fogColor, 10, 30);
+
+  buildingsColorMaterial.color = new THREE.Color(projectVariables.buildingsColor);
+  buildingsWireframeMaterial.color = new THREE.Color(projectVariables.buildingsWireframeColor);
+  buildingsWireframeMaterial.opacity = projectVariables.buildingsWireframeOpacity;
+
+  snowMaterial.color = new THREE.Color(projectVariables.snowParticleColor);
+  groundMaterial.color = new THREE.Color(projectVariables.groundColor);
+  cMat.color = new THREE.Color(projectVariables.lineParticlesColor);
+
   smoke.rotation.y += 0.01;
   smoke.rotation.x += 0.01;
 
-  scene.background = new THREE.Color(projectColorParams.fog);
-  scene.fog = new THREE.Fog(projectColorParams.fog, 10, 30);
-  buildingsMaterial.color = new THREE.Color(projectColorParams.buildings);
-  buildingsLineMaterial.color = new THREE.Color(projectColorParams.buildingsLineColor);
-  buildingsLineMaterial.opacity = projectColorParams.buildingsLineOpacity;
-  gmaterial.color = new THREE.Color(projectColorParams.snowParticleColor);
-  pmaterial.color = new THREE.Color(projectColorParams.groundColor);
-  cMat.color = new THREE.Color(projectColorParams.lineParticlesColor);
+  controls.update();
 
   camera.lookAt(city.position);
   renderer.render(scene, camera);
