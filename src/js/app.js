@@ -15,13 +15,13 @@ import { OrbitControls } from './OrbitControls';
 
 
 const projectColorParams = {
-  fog: "#F02050",
-  buildings: "#000000",
-  buildingsLineColor: "#FFFFFF",
-  buildingsLineOpacity: 0.1,
-  snowParticleColor: '#FF0000',
-  groundColor: '#000000',
-  lineParticlesColor: '#FFFF00',
+  fog: "#FF6F48",
+  buildings: "#020205",
+  buildingsLineColor: "#8382AB",
+  buildingsLineOpacity: 0.02,
+  snowParticleColor: '#FFFFFF',
+  groundColor: '#020205',
+  lineParticlesColor: '#FFFFFF',
   buildingsGrowSpeed: 15,
   uSpeed: 0.001
 };
