@@ -3,7 +3,7 @@ if (module.hot) {
 }
 
 import * as dat from 'dat.gui';
-import { Power1 } from 'gsap/all';
+import { Expo, Power1 } from 'gsap/all';
 import { TweenMax } from 'gsap/gsap-core';
 import * as THREE from 'three';
 import { OrbitControls } from './OrbitControls';
@@ -139,6 +139,35 @@ const generateSnowParticles = () => {
 
   snow.position.y = 2;
 };
+const generateLineParticles = function () {
+  const cScale = 0.1;
+  const cPos = 20;
+  for (let i = 0; i < 60; i++) {
+    const cGeo = new THREE.BoxGeometry(1, cScale / 40, cScale / 40);
+    const cElem = new THREE.Mesh(cGeo, lineMaterial);
+    const cAmp = 3;
+
+    if (createCarPos) {
+      createCarPos = false;
+      cElem.position.x = -cPos;
+      cElem.position.z = (mathRandom(cAmp));
+
+      TweenMax.to(cElem.position, 3, { x: cPos, repeat: -1, yoyo: true, delay: mathRandom(3) });
+    } else {
+      createCarPos = true;
+      cElem.position.x = (mathRandom(cAmp));
+      cElem.position.z = -cPos;
+      cElem.rotation.y = 90 * Math.PI / 180;
+
+      TweenMax.to(cElem.position, 5, { z: cPos, repeat: -1, yoyo: true, delay: mathRandom(3), ease: Power1.easeInOut });
+    };
+    cElem.receiveShadow = true;
+    cElem.castShadow = true;
+    cElem.position.y = Math.abs(mathRandom(5));
+    lines.add(cElem);
+  };
+};
+
 
 // SETUPS ------------------------------------------------------------------------------------
 const setUpRenderer = () => {
@@ -155,7 +184,7 @@ const setUpRenderer = () => {
 };
 const setUpScene = () => {
   scene.background = new THREE.Color(projectVariables.fogColor);
-  scene.fog = new THREE.Fog(projectVariables.fogColor, 10, 16);
+  scene.fog = new THREE.Fog(projectVariables.fogColor, 10, 30);
   // scene.fog = new THREE.FogExp2(projectVariables.fogColor, 0.05);
   // scene.add(spotLightHelper);
   scene.add(ambientLight);
@@ -165,12 +194,15 @@ const setUpScene = () => {
 const setUpCity = () => {
   generateTown();
   generateSnowParticles();
+  generateLineParticles();
+
 
   city.add(groundMesh);
   city.add(lightFront);
   city.add(snow);
+  city.add(lines);
   city.add(town);
-  city.add(gridHelper);
+  // city.add(gridHelper);
 };
 const setUpCamera = () => {
   camera.position.set(0, 5, 20);
@@ -233,7 +265,6 @@ const onWindowResize = () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
 };
 
-
 setUpRenderer();
 setUpLights();
 setUpCamera();
@@ -246,11 +277,6 @@ window.addEventListener('mousemove', onMouseMove, false);
 window.addEventListener('touchstart', onDocumentTouchStart, false);
 window.addEventListener('touchmove', onDocumentTouchMove, false);
 window.addEventListener('resize', onWindowResize, false);
-
-
-
-
-
 
 //----------------------------------------------------------------- CHANGE bluilding colors
 // let setTintNum = true;
@@ -266,59 +292,12 @@ window.addEventListener('resize', onWindowResize, false);
 //   setColor = projectColorParams.buildings;
 //   return setColor;
 // };
-
-
-
-
-
-
-
-
-
-
-const generateCar = function () {
-
-};
-
-
-const createCars = function (cScale = 2, cPos = 20) {
-  const cGeo = new THREE.BoxGeometry(1, cScale / 40, cScale / 40);
-  const cElem = new THREE.Mesh(cGeo, lineMaterial);
-  const cAmp = 3;
-
-  if (createCarPos) {
-    createCarPos = false;
-    cElem.position.x = -cPos;
-    cElem.position.z = (mathRandom(cAmp));
-
-    TweenMax.to(cElem.position, 3, { x: cPos, repeat: -1, yoyo: true, delay: mathRandom(3) });
-  } else {
-    createCarPos = true;
-    cElem.position.x = (mathRandom(cAmp));
-    cElem.position.z = -cPos;
-    cElem.rotation.y = 90 * Math.PI / 180;
-
-    TweenMax.to(cElem.position, 5, { z: cPos, repeat: -1, yoyo: true, delay: mathRandom(3), ease: Power1.easeInOut });
-  };
-  cElem.receiveShadow = true;
-  cElem.castShadow = true;
-  cElem.position.y = Math.abs(mathRandom(5));
-  city.add(cElem);
-};
-
-const generateLines = function () {
-  for (let i = 0; i < 60; i++) {
-    createCars(0.1, 20);
-  };
-};
-
-//----------------------------------------------------------------- CAMERA position
+//------------------------------------------------------------------------------------------
 
 const cameraSet = function () {
-  createCars(0.1, 20, 0xFFFFFF);
-  //TweenMax.to(camera.position, 1, {y:1+Math.random()*4, ease:Expo.easeInOut})
+  // createCars(0.1, 20, 0xFFFFFF);
+  TweenMax.to(camera.position, 1, {y:1+Math.random()*4, ease:Expo.easeInOut})
 };
-
 //----------------------------------------------------------------- ANIMATE
 
 const animate = function () {
@@ -360,10 +339,9 @@ const animate = function () {
 
   controls.update();
 
-  camera.lookAt(city.position);
+  // camera.lookAt(city.position);
   renderer.render(scene, camera);
 };
 
 //----------------------------------------------------------------- START functions
-generateLines();
 animate();
