@@ -9,7 +9,7 @@ import * as THREE from 'three';
 import { OrbitControls } from './OrbitControls';
 import { mathRandom } from './utils/number';
 
-
+// CONSTANTS ---------------------------------------------------------------------------------
 const projectVariables = {
   fogColor: "#FF6F48",
   buildingsColor: "#020205",
@@ -21,20 +21,37 @@ const projectVariables = {
   buildingsGrowSpeed: 15,
   uSpeed: 0.001
 };
+const buildingSegments = 2;
+const snowParticles = 300;
+const snowParticlesSpread = 5;
+let createCarPos = true;
+const mouse = new THREE.Vector2();
+const raycaster = new THREE.Raycaster();
+let INTERSECTED;
+let intersected;
 
-
-// Three JS Template
-//----------------------------------------------------------------- BASIC parameters
+// BASE OBJECTS ------------------------------------------------------------------------------
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 const camera = new THREE.PerspectiveCamera(20, window.innerWidth / window.innerHeight, 1, 500);
-
 const controls = new OrbitControls(camera, renderer.domElement);
 
+// OBJECTS -----------------------------------------------------------------------------------
 const scene = new THREE.Scene();
 const city = new THREE.Object3D();
-const smoke = new THREE.Object3D();
+const snow = new THREE.Object3D();
+const lines = new THREE.Object3D();
 const town = new THREE.Object3D();
 
+const gridHelper = new THREE.GridHelper(60, 120, 0x000000, 0x000000);
+
+// LIGHTS  -----------------------------------------------------------------------------------
+const ambientLight = new THREE.AmbientLight(0xFFFFFF, 4);
+const lightFront = new THREE.SpotLight(0xFFFFFF, 20, 10);
+const lightBack = new THREE.PointLight(0xFFFFFF, 0.5);
+const spotLightHelper = new THREE.SpotLightHelper(lightFront);
+
+// MATERIAL AND MESHES  ----------------------------------------------------------------------
+// buildings  --------------------------------------------------------------------------------
 const buildingsColorMaterial = new THREE.MeshStandardMaterial({
   color: projectVariables.buildingsColor,
   wireframe: false,
@@ -54,7 +71,7 @@ const buildingsWireframeMaterial = new THREE.MeshLambertMaterial({
   // shading:THREE.FlatShading,
   side: THREE.DoubleSide
 });
-
+// ground ------------------------------------------------------------------------------------
 const groundMaterial = new THREE.MeshPhongMaterial({
   color: projectVariables.groundColor,
   side: THREE.DoubleSide,
@@ -65,16 +82,65 @@ const groundMaterial = new THREE.MeshPhongMaterial({
 });
 const groundGeometry = new THREE.PlaneGeometry(60, 60);
 const groundMesh = new THREE.Mesh(groundGeometry, groundMaterial);
-
-
+// snow --------------------------------------------------------------------------------------
 const snowMaterial = new THREE.MeshToonMaterial({
   color: projectVariables.snowParticleColor,
   side: THREE.DoubleSide
 });
 const snowGeometry = new THREE.CircleGeometry(0.01, 3);
+// lines -------------------------------------------------------------------------------------
+const lineMaterial = new THREE.MeshToonMaterial({ color: projectVariables.lineParticlesColor, side: THREE.DoubleSide });
 
 
+// GENERATE OBJECTS --------------------------------------------------------------------------
+const generateTown = () => {
+  for (let i = 1; i < 100; i++) {
+    const geometry = new THREE.BoxGeometry(1, 1, 1, buildingSegments, buildingSegments, buildingSegments);
 
+    const cubeMesh = new THREE.Mesh(geometry, buildingsColorMaterial);
+    const cubeFloorMesh = new THREE.Mesh(geometry, buildingsColorMaterial);
+
+    const wireMesh = new THREE.Mesh(geometry, buildingsWireframeMaterial);
+    const wireFloorMesh = new THREE.Mesh(geometry, buildingsWireframeMaterial);
+
+    cubeMesh.add(wireFloorMesh);
+    cubeMesh.castShadow = true;
+    cubeMesh.receiveShadow = true;
+    cubeMesh.rotationValue = 0.1 + Math.abs(mathRandom(8));
+
+    // cubeFloorMesh.scale.x = floor.scale.z = 1+mathRandom(0.33);
+    cubeFloorMesh.scale.y = 0.05;//+mathRandom(0.5);
+    cubeMesh.scale.y = 0.1 + Math.abs(mathRandom(8));
+    TweenMax.to(cubeMesh.scale, projectVariables.buildingsGrowSpeed, { y: cubeMesh.rotationValue, repeat: -1, yoyo: true, delay: i * 0.005, ease: Power1.easeInOut });
+    /*  cubeMesh.setScale = 0.1+Math.abs(mathRandom());
+     
+     TweenMax.to(cubeMesh.scale, 4, {y:cubeMesh.setScale, ease:Elastic.easeInOut, delay:0.2*i, yoyo:true, repeat:-1});
+     TweenMax.to(cubeMesh.position, 4, {y:cubeMesh.setScale / 2, ease:Elastic.easeInOut, delay:0.2*i, yoyo:true, repeat:-1}); */
+
+    const cubeWidth = 0.9;
+    cubeMesh.scale.x = cubeMesh.scale.z = cubeWidth + mathRandom(1 - cubeWidth);
+    //cubeMesh.position.y = cubeMesh.scale.y / 2;
+    cubeMesh.position.x = Math.round(mathRandom());
+    cubeMesh.position.z = Math.round(mathRandom());
+
+    cubeFloorMesh.position.set(cubeMesh.position.x, 0/*cubeFloorMesh.scale.y / 2*/, cubeMesh.position.z);
+
+    town.add(cubeFloorMesh);
+    town.add(cubeMesh);
+  };
+};
+const generateSnowParticles = () => {
+  for (let h = 1; h < snowParticles; h++) {
+    const snowPartices = new THREE.Mesh(snowGeometry, snowMaterial);
+    snowPartices.position.set(mathRandom(snowParticlesSpread), mathRandom(snowParticlesSpread), mathRandom(snowParticlesSpread));
+    snowPartices.rotation.set(mathRandom(), mathRandom(), mathRandom());
+    snow.add(snowPartices);
+  };
+
+  snow.position.y = 2;
+};
+
+// SETUPS ------------------------------------------------------------------------------------
 const setUpRenderer = () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
 
@@ -82,22 +148,29 @@ const setUpRenderer = () => {
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.shadowMap.needsUpdate = true;
-    renderer.toneMapping = THREE.ReinhardToneMapping;
+    // renderer.toneMapping = THREE.ReinhardToneMapping;
   };
 
   document.body.appendChild(renderer.domElement);
-
-  window.addEventListener('resize', onWindowResize, false);
-  function onWindowResize() {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-  };
 };
 const setUpScene = () => {
   scene.background = new THREE.Color(projectVariables.fogColor);
   scene.fog = new THREE.Fog(projectVariables.fogColor, 10, 16);
   // scene.fog = new THREE.FogExp2(projectVariables.fogColor, 0.05);
+  // scene.add(spotLightHelper);
+  scene.add(ambientLight);
+  scene.add(lightBack);
+  scene.add(city);
+};
+const setUpCity = () => {
+  generateTown();
+  generateSnowParticles();
+
+  city.add(groundMesh);
+  city.add(lightFront);
+  city.add(snow);
+  city.add(town);
+  city.add(gridHelper);
 };
 const setUpCamera = () => {
   camera.position.set(0, 5, 20);
@@ -108,13 +181,72 @@ const setUpGround = () => {
   groundMesh.receiveShadow = true;
   // groundMesh.material.emissive.setHex(0xFFFFFF + Math.random() * 100000);
 };
+const setUpLights = () => {
+  lightFront.rotation.x = 45 * Math.PI / 180;
+  lightFront.rotation.z = -45 * Math.PI / 180;
+  lightFront.position.set(5, 5, 5);
+  lightFront.castShadow = true;
+  lightFront.shadow.mapSize.width = 6000;
+  lightFront.shadow.mapSize.height = lightFront.shadow.mapSize.width;
+  lightFront.penumbra = 0.1;
+  lightBack.position.set(0, 6, 0);
+};
+const setupVariableControls = () => {
+  var gui = new dat.GUI();
+
+  gui.addColor(projectVariables, 'fogColor');
+
+  gui.addColor(projectVariables, 'buildingsColor');
+
+  gui.addColor(projectVariables, 'buildingsWireframeColor');
+  gui.add(projectVariables, 'buildingsWireframeOpacity', 0, 1, 0.01);
+
+  gui.addColor(projectVariables, 'snowParticleColor');
+  gui.addColor(projectVariables, 'lineParticlesColor');
+
+  gui.addColor(projectVariables, 'groundColor');
+};
+
+// EVENT HANDLERS ----------------------------------------------------------------------------
+const onMouseMove = (event) => {
+  event.preventDefault();
+  mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+};
+const onDocumentTouchStart = (event) => {
+  if (event.touches.length == 1) {
+    event.preventDefault();
+    mouse.x = event.touches[0].pageX - window.innerWidth / 2;
+    mouse.y = event.touches[0].pageY - window.innerHeight / 2;
+  };
+};
+const onDocumentTouchMove = (event) => {
+  if (event.touches.length == 1) {
+    event.preventDefault();
+    mouse.x = event.touches[0].pageX - window.innerWidth / 2;
+    mouse.y = event.touches[0].pageY - window.innerHeight / 2;
+  }
+};
+const onWindowResize = () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+};
+
 
 setUpRenderer();
-setUpScene();
+setUpLights();
 setUpCamera();
 setUpGround();
+setUpCity();
+setUpScene();
+setupVariableControls();
 
-let createCarPos = true;
+window.addEventListener('mousemove', onMouseMove, false);
+window.addEventListener('touchstart', onDocumentTouchStart, false);
+window.addEventListener('touchmove', onDocumentTouchMove, false);
+window.addEventListener('resize', onWindowResize, false);
+
 
 
 
@@ -135,147 +267,23 @@ let createCarPos = true;
 //   return setColor;
 // };
 
-//----------------------------------------------------------------- CREATE City
 
 
 
 
-function init() {
-  let segments = 2;
-  for (let i = 1; i < 100; i++) {
-    const geometry = new THREE.BoxGeometry(1, 1, 1, segments, segments, segments);
-
-    const cube = new THREE.Mesh(geometry, buildingsColorMaterial);
-    const wire = new THREE.Mesh(geometry, buildingsWireframeMaterial);
-    const floor = new THREE.Mesh(geometry, buildingsColorMaterial);
-    const wfloor = new THREE.Mesh(geometry, buildingsWireframeMaterial);
-
-    cube.add(wfloor);
-    cube.castShadow = true;
-    cube.receiveShadow = true;
-    cube.rotationValue = 0.1 + Math.abs(mathRandom(8));
-
-    //floor.scale.x = floor.scale.z = 1+mathRandom(0.33);
-    floor.scale.y = 0.05;//+mathRandom(0.5);
-    cube.scale.y = 0.1 + Math.abs(mathRandom(8));
-    TweenMax.to(cube.scale, projectVariables.buildingsGrowSpeed, { y: cube.rotationValue, repeat: -1, yoyo: true, delay: i * 0.005, ease: Power1.easeInOut });
-    /*  cube.setScale = 0.1+Math.abs(mathRandom());
-     
-     TweenMax.to(cube.scale, 4, {y:cube.setScale, ease:Elastic.easeInOut, delay:0.2*i, yoyo:true, repeat:-1});
-     TweenMax.to(cube.position, 4, {y:cube.setScale / 2, ease:Elastic.easeInOut, delay:0.2*i, yoyo:true, repeat:-1}); */
-
-    const cubeWidth = 0.9;
-    cube.scale.x = cube.scale.z = cubeWidth + mathRandom(1 - cubeWidth);
-    //cube.position.y = cube.scale.y / 2;
-    cube.position.x = Math.round(mathRandom());
-    cube.position.z = Math.round(mathRandom());
-
-    floor.position.set(cube.position.x, 0/*floor.scale.y / 2*/, cube.position.z);
-
-    town.add(floor);
-    town.add(cube);
-  };
-  //----------------------------------------------------------------- Particular
-
-  const aparticular = 5;
-
-  for (let h = 1; h < 300; h++) {
-    const particular = new THREE.Mesh(snowGeometry, snowMaterial);
-    particular.position.set(mathRandom(aparticular), mathRandom(aparticular), mathRandom(aparticular));
-    particular.rotation.set(mathRandom(), mathRandom(), mathRandom());
-    smoke.add(particular);
-  };
 
 
 
-  city.add(groundMesh);
-  addVariableControls();
-};
 
-function addVariableControls() {
-  var gui = new dat.GUI();
-  gui.addColor(projectVariables, 'fogColor');
-  gui.addColor(projectVariables, 'buildingsColor');
-  gui.addColor(projectVariables, 'buildingsWireframeColor');
-  gui.add(projectVariables, 'buildingsWireframeOpacity', 0, 1, 0.01);
 
-  gui.addColor(projectVariables, 'snowParticleColor');
-  gui.addColor(projectVariables, 'lineParticlesColor');
-
-  gui.addColor(projectVariables, 'groundColor');
-
-}
-
-//----------------------------------------------------------------- MOUSE function
-const raycaster = new THREE.Raycaster();
-const mouse = new THREE.Vector2();
-let INTERSECTED;
-let intersected;
-
-function onMouseMove(event) {
-  event.preventDefault();
-  mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-  mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-};
-function onDocumentTouchStart(event) {
-  if (event.touches.length == 1) {
-    event.preventDefault();
-    mouse.x = event.touches[0].pageX - window.innerWidth / 2;
-    mouse.y = event.touches[0].pageY - window.innerHeight / 2;
-  };
-};
-function onDocumentTouchMove(event) {
-  if (event.touches.length == 1) {
-    event.preventDefault();
-    mouse.x = event.touches[0].pageX - window.innerWidth / 2;
-    mouse.y = event.touches[0].pageY - window.innerHeight / 2;
-  }
-}
-window.addEventListener('mousemove', onMouseMove, false);
-window.addEventListener('touchstart', onDocumentTouchStart, false);
-window.addEventListener('touchmove', onDocumentTouchMove, false);
-
-//----------------------------------------------------------------- Lights
-const ambientLight = new THREE.AmbientLight(0xFFFFFF, 4);
-const lightFront = new THREE.SpotLight(0xFFFFFF, 20, 10);
-const lightBack = new THREE.PointLight(0xFFFFFF, 0.5);
-
-const spotLightHelper = new THREE.SpotLightHelper(lightFront);
-//scene.add( spotLightHelper );
-
-lightFront.rotation.x = 45 * Math.PI / 180;
-lightFront.rotation.z = -45 * Math.PI / 180;
-lightFront.position.set(5, 5, 5);
-lightFront.castShadow = true;
-lightFront.shadow.mapSize.width = 6000;
-lightFront.shadow.mapSize.height = lightFront.shadow.mapSize.width;
-lightFront.penumbra = 0.1;
-lightBack.position.set(0, 6, 0);
-
-smoke.position.y = 2;
-
-scene.add(ambientLight);
-city.add(lightFront);
-scene.add(lightBack);
-scene.add(city);
-city.add(smoke);
-city.add(town);
-
-//----------------------------------------------------------------- GRID Helper
-const gridHelper = new THREE.GridHelper(60, 120, 0xFF0000, 0x000000);
-city.add(gridHelper);
-
-//----------------------------------------------------------------- CAR world
 const generateCar = function () {
 
 };
-//----------------------------------------------------------------- LINES world
 
-const cMat = new THREE.MeshToonMaterial({ color: projectVariables.lineParticlesColor, side: THREE.DoubleSide });
 
 const createCars = function (cScale = 2, cPos = 20) {
   const cGeo = new THREE.BoxGeometry(1, cScale / 40, cScale / 40);
-  const cElem = new THREE.Mesh(cGeo, cMat);
+  const cElem = new THREE.Mesh(cGeo, lineMaterial);
   const cAmp = 3;
 
   if (createCarPos) {
@@ -337,7 +345,7 @@ const animate = function () {
 
 
   scene.background = new THREE.Color(projectVariables.fogColor);
-  scene.fog = new THREE.Fog(projectVariables.fogColor, 10, 30);
+  // scene.fog = new THREE.Fog(projectVariables.fogColor, 10, 30);
 
   buildingsColorMaterial.color = new THREE.Color(projectVariables.buildingsColor);
   buildingsWireframeMaterial.color = new THREE.Color(projectVariables.buildingsWireframeColor);
@@ -345,10 +353,10 @@ const animate = function () {
 
   snowMaterial.color = new THREE.Color(projectVariables.snowParticleColor);
   groundMaterial.color = new THREE.Color(projectVariables.groundColor);
-  cMat.color = new THREE.Color(projectVariables.lineParticlesColor);
+  lineMaterial.color = new THREE.Color(projectVariables.lineParticlesColor);
 
-  smoke.rotation.y += 0.01;
-  smoke.rotation.x += 0.01;
+  snow.rotation.y += 0.01;
+  snow.rotation.x += 0.01;
 
   controls.update();
 
@@ -358,5 +366,4 @@ const animate = function () {
 
 //----------------------------------------------------------------- START functions
 generateLines();
-init();
 animate();
