@@ -3,7 +3,10 @@ import { Elastic, Power1 } from 'gsap/all';
 import { TweenMax } from 'gsap/gsap-core';
 import * as THREE from 'three';
 import { OrbitControls } from '../js/three/OrbitControls';
-import { mathRandom } from '../js/utils/number';
+import { mathRandom } from '../utils/number';
+import buildingsSpec from '../utils/generateBuildings';
+import { Power4 } from 'gsap/gsap-core';
+console.log(THREE);
 
 const projectVariables = {
   fogColor: "#FF6F48",
@@ -25,11 +28,6 @@ const raycaster = new THREE.Raycaster();
 let INTERSECTED;
 let intersected;
 
-
-// const spotLightHelper = new THREE.SpotLightHelper(lightFront);
-
-
-
 class CityEnvironment {
 
   constructor() {
@@ -48,7 +46,8 @@ class CityEnvironment {
     this.ambientLight = new THREE.AmbientLight(0xFFFFFF, 4);
     this.lightFront = new THREE.SpotLight(0xFFFFFF, 20, 10);
     this.lightBack = new THREE.PointLight(0xFFFFFF, 0.5);
-
+    // this.spotLightHelper = new THREE.SpotLightHelper(this.lightFront);
+    this.cameraPointLight = new THREE.PointLight(0xffffff);
 
     this.buildingsColorMaterial = new THREE.MeshStandardMaterial({
       color: projectVariables.buildingsColor,
@@ -89,22 +88,86 @@ class CityEnvironment {
     this.setupScene();
     this.generateCity();
     this.bindEvents();
+
+    console.log(this, TweenMax);
+
   }
 
   bindEvents() {
     this.container.addEventListener('resize', this.onWindowResize.bind(this));
+    this.controls.addEventListener('change', this.onControlsChange.bind(this));
+    document.getElementById('exploreBtn').addEventListener('click', this.startCameraTour.bind(this));
   }
 
   setupCamera() {
-    this.camera.position.set(0, 10, 20);
+    this.camera.position.set(-22, 25, 20);
   }
+  startCameraTour() {
+    document.getElementById('exploreBtn').style.display = "none"
+
+    const angels = [
+      { x: -4.727919694453478, y: 9.610596400995368, z: -4.902635459459849 },
+      { x: -9.387513949808628, y: 4.361033650928754, z: -3.016824226668273 },
+      { x: 4.892292649386681, y: 1.0158754255090539, z: -13.37444157625071 },
+      { x: 5.041919011118039, y: 4.625301222630572, z: -13.364091819438183 },
+      { x: 16.909804496215823, y: 3.684319169448478, z: 12.101808557392527 }
+    ];
+    const targets = [
+      { x: -0.026530800744345752, y: 0.19071215594007832, z: 0.3133981088417902 },
+      { x: 4.14079208500648, y: -0.22234476570269976, z: 0.44038109069180714 },
+      { x: 2.1377918912910956, y: 0.12282329636523791, z: 1.250521281444583 },
+      { x: 3.141701826927174, y: -0.4143356276611831, z: 1.2606705852077156 },
+      { x: 2.570531488236015, y: 0.8916933410752306, z: 1.098608468993924 }
+
+    ];
+
+    TweenMax.to(this.camera.position, 1,
+      {
+        ...angels[0],
+        yoyo: true,
+        delay: 0.05,
+        ease: Power4.easeInOut
+      });
+    // this.controls.target = new THREE.Vector3(targets[i].x, targets[i].y, targets[i].z);
+    TweenMax.to(this.controls.target, 1,
+      {
+        ...targets[0],
+        yoyo: true,
+        delay: 0.05,
+        ease: Power4.easeInOut
+      });
+
+    let i = 1;
+    setInterval(() => {
+      TweenMax.to(this.camera.position, 1,
+        {
+          ...angels[i],
+          yoyo: true,
+          delay: 0.05,
+          ease: Power4.easeInOut
+        });
+      // this.controls.target = new THREE.Vector3(targets[i].x, targets[i].y, targets[i].z);
+      TweenMax.to(this.controls.target, 1,
+        {
+          ...targets[i],
+          yoyo: true,
+          delay: 0.05,
+          ease: Power4.easeInOut
+        });
+      // this.camera.lookAt(new THREE.Vector3(targets[i].x , targets[i].y ,targets[i].z));
+      i++;
+      if (i === 5) { i = 0; }
+    }, 2000);
+  }
+
   setupScene() {
     this.scene.background = new THREE.Color(projectVariables.fogColor);
-    this.scene.fog = new THREE.Fog(projectVariables.fogColor, 10, 30);
+    this.scene.fog = new THREE.Fog(projectVariables.fogColor, 12, 16);
     // this.scene.fog = new THREE.FogExp2(projectVariables.fogColor, 0.05);
-    // this.scene.add(spotLightHelper);
+    // this.scene.add(this.spotLightHelper);
     this.scene.add(this.ambientLight);
     this.scene.add(this.lightBack);
+    this.scene.add(this.cameraPointLight);
     this.scene.add(this.city);
   }
   setupRenderer() {
@@ -133,7 +196,7 @@ class CityEnvironment {
     // this.generateGrid();
   }
   generateBuildings() {
-    for (let i = 1; i < 100; i++) {
+    for (const buildingSpec of buildingsSpec) {
       const geometry = new THREE.BoxGeometry(1, 1, 1, buildingSegments, buildingSegments, buildingSegments);
 
       const buildingMesh = new THREE.Mesh(geometry, this.buildingsColorMaterial);
@@ -145,31 +208,44 @@ class CityEnvironment {
       buildingMesh.add(buildingWireFloorMesh);
       buildingMesh.castShadow = true;
       buildingMesh.receiveShadow = true;
-      buildingMesh.rotationValue = 0.1 + Math.abs(mathRandom());
 
       // cubeFloorMesh.scale.x = floor.scale.z = 1+mathRandom(0.33);
       buildingFloorMesh.scale.y = 0.05;//+mathRandom(0.5);
-      buildingMesh.scale.y = 0.1 + Math.abs(mathRandom());
+      buildingMesh.scale.y = buildingSpec.scale.y;
 
-      TweenMax.to(buildingMesh.scale, projectVariables.buildingsGrowSpeed, { y: buildingMesh.rotationValue, repeat: -1, yoyo: true, delay: i * 0.005, ease: Power1.easeInOut });
-      
+      TweenMax.to(
+        buildingMesh.scale,
+        projectVariables.buildingsGrowSpeed,
+        {
+          y: buildingSpec.transform.scale.y,
+          repeat: -1,
+          yoyo: true,
+          delay: buildingSpec.transform.delay,
+          ease: Power1.easeInOut
+        });
+
       /* 
       buildingMesh.setScale = 0.1 + Math.abs(mathRandom());
       TweenMax.to(buildingMesh.scale, 4, { y: buildingMesh.setScale, ease: Elastic.easeInOut, delay: 0.2 * i, yoyo: true, repeat: -1 });
       TweenMax.to(buildingMesh.position, 4, { y: buildingMesh.setScale / 2, ease: Elastic.easeInOut, delay: 0.2 * i, yoyo: true, repeat: -1 });
       */
 
-      const cubeWidth = 0.9;
-      buildingMesh.scale.x = buildingMesh.scale.z = cubeWidth + mathRandom(1 - cubeWidth);
+
+      buildingMesh.scale.x = buildingSpec.scale.x;
+      buildingMesh.scale.z = buildingSpec.scale.z;
+      // const cubeWidth = 0.9;
+      // buildingMesh.scale.x = buildingMesh.scale.z = cubeWidth + mathRandom(1 - cubeWidth);
       //buildingMesh.position.y = buildingMesh.scale.y / 2;
-      buildingMesh.position.x = Math.round(mathRandom());
-      buildingMesh.position.z = Math.round(mathRandom());
+      buildingMesh.position.x = buildingSpec.position.x;
+      buildingMesh.position.z = buildingSpec.position.z;
+      // buildingMesh.position.x = Math.round(mathRandom());
+      // buildingMesh.position.z = Math.round(mathRandom());
 
       buildingFloorMesh.position.set(buildingMesh.position.x, 0/*cubeFloorMesh.scale.y / 2*/, buildingMesh.position.z);
 
       this.city.add(buildingFloorMesh);
       this.city.add(buildingMesh);
-    };
+    }
   };
   generateSnowParticles() {
     const snowGeometry = new THREE.CircleGeometry(0.01, 3);
@@ -239,8 +315,8 @@ class CityEnvironment {
     // this.groundMaterial.color = new THREE.Color(projectVariables.groundColor);
     // this.lineMaterial.color = new THREE.Color(projectVariables.lineParticlesColor);
 
-    // snow.rotation.y += 0.01;
-    // snow.rotation.x += 0.01;
+    this.snow.rotation.y += 0.01;
+    this.snow.rotation.x += 0.01;
 
     this.controls.update();
 
@@ -251,6 +327,11 @@ class CityEnvironment {
     this.camera.aspect = this.container.innerWidth / this.container.innerHeight;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(this.container.innerWidth, this.container.innerHeight);
+  }
+
+
+  onControlsChange() {
+    this.cameraPointLight.position.copy(this.camera.position);
   }
 }
 
