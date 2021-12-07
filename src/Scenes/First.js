@@ -1,23 +1,62 @@
 
-import { Elastic, Power1 } from 'gsap/all';
-import { TweenMax } from 'gsap/gsap-core';
+import * as dat from 'dat.gui';
+import { Power4, Power1, gsap } from 'gsap/gsap-core';
 import * as THREE from 'three';
 import { OrbitControls } from '../js/three/OrbitControls';
-import { mathRandom } from '../utils/number';
 import buildingsSpec from '../utils/generateBuildings';
-import { Power4 } from 'gsap/gsap-core';
+import { mathRandom } from '../utils/number';
+
 console.log(THREE);
 
 const projectVariables = {
-  fogColor: "#FF6F48",
-  buildingsColor: "#020205",
-  buildingsWireframeColor: "#8382AB",
-  buildingsWireframeOpacity: 0.02,
-  snowParticleColor: '#FFFFFF',
-  lineParticlesColor: '#FFFFFF',
-  groundColor: '#020205',
-  buildingsGrowSpeed: 15,
-  uSpeed: 0.001
+  Background: {
+    Color: "#FF6F48",
+  },
+  Fog: {
+    Color: "#FF6F48",
+    Near: 12,
+    Far: 16
+  },
+  Buildings: {
+    Color: "#020205",
+    Opacity: 1,
+    // Wireframe: false,
+    // Transparent: false,
+    WireframeColor: "#8382AB",
+    WireframeOpacity: 0.02,
+    Roughness: 0,
+    Metalness: 0,
+    GrowSpeed: 15,
+  },
+  Snow: {
+    Color: '#FFFFFF',
+    RotationSpeedX: 0.01,
+    RotationSpeedY: 0.01
+  },
+  Lines: {
+    Color: '#FFFFFF',
+    TravelTimeX: 3,
+    TravelTimeY: 5,
+  },
+  Ground: {
+    Color: '#020205',
+    Roughness: 10,
+    Metalness: 0.6,
+    Opacity: 0.9,
+    Transparent: true
+  },
+  Lights: {
+    ambientLightColor: '#FFFFFF',
+    ambientLightIntensity: 4,
+    frontLightColor: '#FFFFFF',
+    frontLightIntensity: 20,
+    frontLightDistance: 10,
+    backLightColor: '#FFFFFF',
+    backLightIntensity: 0.5,
+    cameraLightColor: '#FFFFFF',
+    cameraLightIntensity: 8,
+    cameraLightDistance: 15,
+  }
 };
 const buildingSegments = 2;
 const snowParticles = 300;
@@ -53,6 +92,7 @@ class CityEnvironment {
       }
     }
   }
+
   constructor() {
 
     this.container = window;
@@ -61,160 +101,87 @@ class CityEnvironment {
     this.camera = new THREE.PerspectiveCamera(20, this.container.innerWidth / this.container.innerHeight, 1, 200);
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
 
+    this.backgroundColor = new THREE.Color(projectVariables.Background.Color);
+    this.fog = new THREE.Fog(projectVariables.Fog.Color, projectVariables.Fog.Near, projectVariables.Fog.Far);
+
     this.city = new THREE.Object3D();
     this.snow = new THREE.Object3D();
     this.lines = new THREE.Object3D();
     this.buildings = new THREE.Object3D();
 
-    this.ambientLight = new THREE.AmbientLight(0xFFFFFF, 4);
-    this.lightFront = new THREE.SpotLight(0xFFFFFF, 20, 10);
-    this.lightBack = new THREE.PointLight(0xFFFFFF, 0.5);
+    this.ambientLight = new THREE.AmbientLight(projectVariables.Lights.ambientLightColor, projectVariables.Lights.ambientLightIntensity);
+    this.frontLight = new THREE.SpotLight(projectVariables.Lights.frontLightColor, projectVariables.Lights.frontLightIntensity, projectVariables.Lights.frontLightDistance);
+    this.backLight = new THREE.PointLight(projectVariables.Lights.backLightColor, projectVariables.Lights.backLightIntensity);
+    this.cameraLight = new THREE.PointLight(projectVariables.Lights.cameraLightColor, projectVariables.Lights.cameraLightIntensity, projectVariables.Lights.cameraLightDistance);
     // this.spotLightHelper = new THREE.SpotLightHelper(this.lightFront);
-    this.cameraPointLight = new THREE.PointLight(0xffffff, 8, 15);
+
 
     this.buildingsColorMaterial = new THREE.MeshStandardMaterial({
-      color: projectVariables.buildingsColor,
+      color: projectVariables.Buildings.Color,
       wireframe: false,
-      shading: THREE.SmoothShading,
-      side: THREE.DoubleSide
-      //opacity:0.9,
-      //transparent:true,
-      //roughness: 0.3,
-      //metalness: 1,
-      //shading:THREE.FlatShading,
+      shading: THREE.SmoothShading, // THREE.FlatShading,
+      side: THREE.DoubleSide,
+      opacity: projectVariables.Buildings.Opacity,
+      transparent: false,
+      roughness: projectVariables.Buildings.Roughness, // 0.3
+      metalness: projectVariables.Buildings.Metalness, // 1
     });
     this.buildingsWireframeMaterial = new THREE.MeshLambertMaterial({
-      color: projectVariables.buildingsWireframeColor,
+      color: projectVariables.Buildings.WireframeColor,
       wireframe: true,
       transparent: true,
-      opacity: projectVariables.buildingsWireframeOpacity,
+      opacity: projectVariables.Buildings.WireframeOpacity,
       side: THREE.DoubleSide,
       // shading:THREE.FlatShading,
     });
     this.groundMaterial = new THREE.MeshPhongMaterial({
-      color: projectVariables.groundColor,
+      color: projectVariables.Ground.Color,
       side: THREE.DoubleSide,
-      roughness: 10,
-      metalness: 0.6,
-      opacity: 0.9,
-      transparent: true
+      roughness: projectVariables.Ground.Roughness,
+      metalness: projectVariables.Ground.Metalness,
+      opacity: projectVariables.Ground.Opacity,
+      transparent: projectVariables.Ground.Transparent,
     });
     this.snowMaterial = new THREE.MeshToonMaterial({
-      color: projectVariables.snowParticleColor,
+      color: projectVariables.Snow.Color,
       side: THREE.DoubleSide
     });
-    this.lineMaterial = new THREE.MeshToonMaterial({ color: projectVariables.lineParticlesColor, side: THREE.DoubleSide });
-
+    this.lineMaterial = new THREE.MeshToonMaterial({
+      color: projectVariables.Lines.Color,
+      side: THREE.DoubleSide
+    });
 
     this.setupCamera();
     this.setupRenderer();
     this.setupScene();
+    this.setupLights();
+    this.setupVariableControls();
     this.generateCity();
     this.bindEvents();
 
-    console.log(this, TweenMax);
+    console.log(this, gsap);
   }
 
   bindEvents() {
     this.container.addEventListener('resize', this.onWindowResize.bind(this));
     this.controls.addEventListener('change', this.onControlsChange.bind(this));
+
     document.getElementById('exploreBtn').addEventListener('click', this.startCameraTour.bind(this));
     document.getElementById('logBtn').addEventListener('click', this.logCamera.bind(this));
-    document.getElementById('disableFog').addEventListener('click', () => {
-      this.scene.fog.near = this.scene.fog.near == 0.1 ? 12 : 0.1;
-      this.scene.fog.far = this.scene.fog.far == 0 ? 16 : 0;
-    });
   }
-  logCamera() {
-    document.getElementById('cameraSpec').innerHTML = `location: {x: ${this.camera.position.x}, y: ${this.camera.position.y}, z: ${this.camera.position.z}}`;
-    document.getElementById('cameraSpec').innerHTML += `<br></br>`;
-    document.getElementById('cameraSpec').innerHTML += `looking at: {x: ${this.controls.target.x}, y: ${this.controls.target.y}, z: ${this.controls.target.z}}`;
 
-    const data = {
-      cameraLocation: {
-        x: this.camera.position.x,
-        y: this.camera.position.y,
-        z: this.camera.position.z,
-      },
-      cameraTarget: {
-        x: this.controls.target.x,
-        y: this.controls.target.y,
-        z: this.controls.target.z,
-      },
 
-    };
-    this.copyToClipboard(JSON.stringify(data));
-  }
   setupCamera() {
     this.camera.position.set(-22, 25, 20);
   }
-  startCameraTour() {
-    document.getElementById('exploreBox').style.display = "none";
-    document.getElementById('logBox').style.display = "flex";
-
-    const angels = [
-      { x: -4.727919694453478, y: 9.610596400995368, z: -4.902635459459849 },
-      { x: -9.387513949808628, y: 4.361033650928754, z: -3.016824226668273 },
-      { x: 4.892292649386681, y: 1.0158754255090539, z: -13.37444157625071 },
-      { x: 5.041919011118039, y: 4.625301222630572, z: -13.364091819438183 },
-      { x: 16.909804496215823, y: 3.684319169448478, z: 12.101808557392527 }
-    ];
-    const targets = [
-      { x: -0.026530800744345752, y: 0.19071215594007832, z: 0.3133981088417902 },
-      { x: 4.14079208500648, y: -0.22234476570269976, z: 0.44038109069180714 },
-      { x: 2.1377918912910956, y: 0.12282329636523791, z: 1.250521281444583 },
-      { x: 3.141701826927174, y: -0.4143356276611831, z: 1.2606705852077156 },
-      { x: 2.570531488236015, y: 0.8916933410752306, z: 1.098608468993924 }
-
-    ];
-
-    TweenMax.to(this.camera.position, 1,
-      {
-        ...angels[0],
-        yoyo: true,
-        delay: 0.05,
-        ease: Power4.easeInOut
-      });
-    // this.controls.target = new THREE.Vector3(targets[i].x, targets[i].y, targets[i].z);
-    TweenMax.to(this.controls.target, 1,
-      {
-        ...targets[0],
-        yoyo: true,
-        delay: 0.05,
-        ease: Power4.easeInOut
-      });
-
-    // let i = 1;
-    // setInterval(() => {
-    //   TweenMax.to(this.camera.position, 1,
-    //     {
-    //       ...angels[i],
-    //       yoyo: true,
-    //       delay: 0.05,
-    //       ease: Power4.easeInOut
-    //     });
-    //   // this.controls.target = new THREE.Vector3(targets[i].x, targets[i].y, targets[i].z);
-    //   TweenMax.to(this.controls.target, 1,
-    //     {
-    //       ...targets[i],
-    //       yoyo: true,
-    //       delay: 0.05,
-    //       ease: Power4.easeInOut
-    //     });
-    //   // this.camera.lookAt(new THREE.Vector3(targets[i].x , targets[i].y ,targets[i].z));
-    //   i++;
-    //   if (i === 5) { i = 0; }
-    // }, 2000);
-  }
-
   setupScene() {
-    this.scene.background = new THREE.Color(projectVariables.fogColor);
-    this.scene.fog = new THREE.Fog(projectVariables.fogColor, 12, 16);
+    this.scene.background = this.backgroundColor;
+    this.scene.fog = this.fog;
     // this.scene.fog = new THREE.FogExp2(projectVariables.fogColor, 0.05);
     // this.scene.add(this.spotLightHelper);
     this.scene.add(this.ambientLight);
-    this.scene.add(this.lightBack);
-    this.scene.add(this.cameraPointLight);
+    this.scene.add(this.backLight);
+    this.scene.add(this.cameraLight);
     this.scene.add(this.city);
   }
   setupRenderer() {
@@ -233,6 +200,54 @@ class CityEnvironment {
 
     this.renderer.setAnimationLoop(() => { this.render(); });
   }
+  setupLights() {
+    this.frontLight.rotation.x = 45 * Math.PI / 180;
+    this.frontLight.rotation.z = -45 * Math.PI / 180;
+    this.frontLight.position.set(5, 5, 5);
+    this.frontLight.castShadow = true;
+    this.frontLight.shadow.mapSize.width = 6000;
+    this.frontLight.shadow.mapSize.height = this.frontLight.shadow.mapSize.width;
+    this.frontLight.penumbra = 0.1;
+    this.backLight.position.set(0, 6, 0);
+  };
+  setupVariableControls() {
+    this.gui = new dat.GUI();
+
+    // const background = this.gui.addFolder('Background');
+    // background.addColor(projectVariables.Background, 'Color');
+
+    const fog = this.gui.addFolder('Fog');
+    fog.addColor(projectVariables.Fog, 'Color');
+    fog.add(projectVariables.Fog, 'Near', 0, 50);
+    fog.add(projectVariables.Fog, 'Far', 0, 300);
+    fog.open();
+
+    const snow = this.gui.addFolder('Snow');
+    snow.addColor(projectVariables.Snow, 'Color');
+    snow.add(projectVariables.Snow, 'RotationSpeedX', -0.1, 0.1);
+    snow.add(projectVariables.Snow, 'RotationSpeedY', -0.1, 0.1);
+    snow.open();
+
+    const lines = this.gui.addFolder('Lines');
+    lines.addColor(projectVariables.Lines, 'Color');
+    lines.add(projectVariables.Lines, 'TravelTimeX', 0, 1000);
+    lines.add(projectVariables.Lines, 'TravelTimeY', 0, 1000);
+    lines.open();
+
+
+    // this.gui.addColor(projectVariables, 'fogColor');
+
+    // this.gui.addColor(projectVariables, 'buildingsColor');
+
+    // this.gui.addColor(projectVariables, 'buildingsWireframeColor');
+    // this.gui.add(projectVariables, 'buildingsWireframeOpacity', 0, 1, 0.01);
+
+    // this.gui.addColor(projectVariables, 'snowParticleColor');
+    // this.gui.addColor(projectVariables, 'lineParticlesColor');
+
+    // this.gui.addColor(projectVariables, 'groundColor');
+  };
+
 
   generateCity() {
     this.generateBuildings();
@@ -260,21 +275,21 @@ class CityEnvironment {
       buildingFloorMesh.scale.y = 0.05;//+mathRandom(0.5);
       buildingMesh.scale.y = buildingSpec.scale.y;
 
-      TweenMax.to(
+      gsap.to(
         buildingMesh.scale,
-        projectVariables.buildingsGrowSpeed,
         {
           y: buildingSpec.transform.scale.y,
           repeat: -1,
           yoyo: true,
+          duration: projectVariables.Buildings.GrowSpeed,
           delay: buildingSpec.transform.delay,
           ease: Power1.easeInOut
         });
 
       /* 
       buildingMesh.setScale = 0.1 + Math.abs(mathRandom());
-      TweenMax.to(buildingMesh.scale, 4, { y: buildingMesh.setScale, ease: Elastic.easeInOut, delay: 0.2 * i, yoyo: true, repeat: -1 });
-      TweenMax.to(buildingMesh.position, 4, { y: buildingMesh.setScale / 2, ease: Elastic.easeInOut, delay: 0.2 * i, yoyo: true, repeat: -1 });
+      gsap.to(buildingMesh.scale,  { y: buildingMesh.setScale, duration:4 , ease: Elastic.easeInOut, delay: 0.2 * i, yoyo: true, repeat: -1 });
+      gsap.to(buildingMesh.position,  { y: buildingMesh.setScale / 2, duration:4 ,ease: Elastic.easeInOut, delay: 0.2 * i, yoyo: true, repeat: -1 });
       */
 
 
@@ -321,14 +336,26 @@ class CityEnvironment {
         cElem.position.x = -cPos;
         cElem.position.z = (mathRandom(cAmp));
 
-        TweenMax.to(cElem.position, 3, { x: cPos, repeat: -1, yoyo: true, delay: mathRandom(3) });
+        this.lineTweenX = gsap.to(cElem.position, {
+          x: cPos, repeat: -1,
+          duration: projectVariables.Lines.TravelTimeX,
+          yoyo: true,
+          delay: mathRandom(3),
+          ease: Power1.easeInOut
+        });
       } else {
         createCarPos = true;
         cElem.position.x = (mathRandom(cAmp));
         cElem.position.z = -cPos;
         cElem.rotation.y = 90 * Math.PI / 180;
 
-        TweenMax.to(cElem.position, 5, { z: cPos, repeat: -1, yoyo: true, delay: mathRandom(3), ease: Power1.easeInOut });
+        this.lineTweenY = gsap.to(cElem.position, {
+          z: cPos, repeat: -1,
+          duration: projectVariables.Lines.TravelTimeX,
+          yoyo: true,
+          delay: mathRandom(3),
+          ease: Power1.easeInOut
+        });
       };
       cElem.receiveShadow = true;
       cElem.castShadow = true;
@@ -350,24 +377,119 @@ class CityEnvironment {
     this.city.add(groundMesh);
   }
 
+
   render() {
-    // this.scene.background = new THREE.Color(projectVariables.fogColor);
-    // // scene.fog = new THREE.Fog(projectVariables.fogColor, 10, 30);
+    this.updateVariables();
 
-    // this.buildingsColorMaterial.color = new THREE.Color(projectVariables.buildingsColor);
-    // this.buildingsWireframeMaterial.color = new THREE.Color(projectVariables.buildingsWireframeColor);
-    // this.buildingsWireframeMaterial.opacity = projectVariables.buildingsWireframeOpacity;
-
-    // this.snowMaterial.color = new THREE.Color(projectVariables.snowParticleColor);
-    // this.groundMaterial.color = new THREE.Color(projectVariables.groundColor);
-    // this.lineMaterial.color = new THREE.Color(projectVariables.lineParticlesColor);
-
-    this.snow.rotation.y += 0.01;
-    this.snow.rotation.x += 0.01;
+    this.snow.rotation.y += projectVariables.Snow.RotationSpeedX;
+    this.snow.rotation.x += projectVariables.Snow.RotationSpeedY;
 
     this.controls.update();
 
     this.renderer.render(this.scene, this.camera);
+  }
+
+
+  updateVariables() {
+    // this.backgroundColor.set(new THREE.Color(projectVariables.Background.Color));
+    this.backgroundColor.set(new THREE.Color(projectVariables.Fog.Color));
+    this.fog.color = new THREE.Color(projectVariables.Fog.Color);
+    this.fog.near = projectVariables.Fog.Near;
+    this.fog.far = projectVariables.Fog.Far;
+
+    this.buildingsColorMaterial.color = new THREE.Color(projectVariables.Buildings.Color);
+    this.buildingsWireframeMaterial.color = new THREE.Color(projectVariables.Buildings.WireframeColor);
+    this.buildingsWireframeMaterial.opacity = projectVariables.Buildings.WireframeOpacity;
+
+    this.snowMaterial.color = new THREE.Color(projectVariables.Snow.Color);
+    this.groundMaterial.color = new THREE.Color(projectVariables.Ground.Color);
+    this.lineMaterial.color = new THREE.Color(projectVariables.Lines.Color);
+
+    // this.lineTweenX.d
+    this.lineTweenX.duration(0);
+    this.lineTweenY.duration(1000);
+  }
+  startCameraTour() {
+    document.getElementById('exploreBox').style.display = "none";
+    document.getElementById('logBox').style.display = "flex";
+
+    const angels = [
+      { x: -4.727919694453478, y: 9.610596400995368, z: -4.902635459459849 },
+      { x: -9.387513949808628, y: 4.361033650928754, z: -3.016824226668273 },
+      { x: 4.892292649386681, y: 1.0158754255090539, z: -13.37444157625071 },
+      { x: 5.041919011118039, y: 4.625301222630572, z: -13.364091819438183 },
+      { x: 16.909804496215823, y: 3.684319169448478, z: 12.101808557392527 }
+    ];
+    const targets = [
+      { x: -0.026530800744345752, y: 0.19071215594007832, z: 0.3133981088417902 },
+      { x: 4.14079208500648, y: -0.22234476570269976, z: 0.44038109069180714 },
+      { x: 2.1377918912910956, y: 0.12282329636523791, z: 1.250521281444583 },
+      { x: 3.141701826927174, y: -0.4143356276611831, z: 1.2606705852077156 },
+      { x: 2.570531488236015, y: 0.8916933410752306, z: 1.098608468993924 }
+
+    ];
+
+    gsap.to(this.camera.position,
+      {
+        ...angels[0],
+        yoyo: true,
+        delay: 0.05,
+        duration: 1,
+        ease: Power4.easeInOut
+      });
+    // this.controls.target = new THREE.Vector3(targets[i].x, targets[i].y, targets[i].z);
+    gsap.to(this.controls.target,
+      {
+        ...targets[0],
+        yoyo: true,
+        delay: 0.05,
+        duration: 1,
+        ease: Power4.easeInOut
+      });
+
+    // let i = 1;
+    // setInterval(() => {
+    //   gsap.to(this.camera.position, 
+    //     {
+    //       ...angels[i],
+    //       yoyo: true,
+    //       delay: 0.05,
+    //       duration: 1,
+    //       ease: Power4.easeInOut
+    //     });
+    //   // this.controls.target = new THREE.Vector3(targets[i].x, targets[i].y, targets[i].z);
+    //   gsap.to(this.controls.target, 
+    //     {
+    //       ...targets[i],
+    //       yoyo: true,
+    //       delay: 0.05,
+    //       duration: 1,
+    //       ease: Power4.easeInOut
+    //     });
+    //   // this.camera.lookAt(new THREE.Vector3(targets[i].x , targets[i].y ,targets[i].z));
+    //   i++;
+    //   if (i === 5) { i = 0; }
+    // }, 2000);
+  }
+  logCamera() {
+    document.getElementById('cameraSpec').innerHTML = `location: {x: ${this.camera.position.x}, y: ${this.camera.position.y}, z: ${this.camera.position.z}}`;
+    document.getElementById('cameraSpec').innerHTML += `<br></br>`;
+    document.getElementById('cameraSpec').innerHTML += `looking at: {x: ${this.controls.target.x}, y: ${this.controls.target.y}, z: ${this.controls.target.z}}`;
+
+    const data = {
+      cameraLocation: {
+        x: this.camera.position.x,
+        y: this.camera.position.y,
+        z: this.camera.position.z,
+      },
+      cameraTarget: {
+        x: this.controls.target.x,
+        y: this.controls.target.y,
+        z: this.controls.target.z,
+      },
+
+    };
+    this.copyToClipboard(JSON.stringify(data));
   }
 
   onWindowResize() {
@@ -375,10 +497,8 @@ class CityEnvironment {
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(this.container.innerWidth, this.container.innerHeight);
   }
-
-
   onControlsChange() {
-    this.cameraPointLight.position.copy(this.camera.position);
+    this.cameraLight.position.copy(this.camera.position);
   }
 }
 
