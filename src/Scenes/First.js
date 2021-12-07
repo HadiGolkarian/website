@@ -90,20 +90,44 @@ class CityEnvironment {
     this.bindEvents();
 
     console.log(this, TweenMax);
-
   }
 
   bindEvents() {
     this.container.addEventListener('resize', this.onWindowResize.bind(this));
     this.controls.addEventListener('change', this.onControlsChange.bind(this));
     document.getElementById('exploreBtn').addEventListener('click', this.startCameraTour.bind(this));
+    document.getElementById('logBtn').addEventListener('click', this.logCamera.bind(this));
+    document.getElementById('disableFog').addEventListener('click', () => {
+      this.scene.fog.near = this.scene.fog.near == 0.1 ? 12 : 0.1;
+      this.scene.fog.far = this.scene.fog.far == 0 ? 16 : 0;
+    });
   }
+  logCamera() {
+    document.getElementById('cameraSpec').innerHTML = `location: {x: ${this.camera.position.x}, y: ${this.camera.position.y}, z: ${this.camera.position.z}}`;
+    document.getElementById('cameraSpec').innerHTML += `<br></br>`;
+    document.getElementById('cameraSpec').innerHTML += `looking at: {x: ${this.controls.target.x}, y: ${this.controls.target.y}, z: ${this.controls.target.z}}`;
 
+    const data = {
+      cameraLocation: {
+        x: this.camera.position.x,
+        y: this.camera.position.y,
+        z: this.camera.position.z,
+      },
+      cameraTarget: {
+        x: this.controls.target.x,
+        y: this.controls.target.y,
+        z: this.controls.target.z,
+      },
+
+    };
+    navigator.clipboard.writeText(JSON.stringify(data));
+  }
   setupCamera() {
     this.camera.position.set(-22, 25, 20);
   }
   startCameraTour() {
-    document.getElementById('exploreBtn').style.display = "none"
+    document.getElementById('exploreBox').style.display = "none";
+    document.getElementById('logBox').style.display = "flex";
 
     const angels = [
       { x: -4.727919694453478, y: 9.610596400995368, z: -4.902635459459849 },
@@ -137,27 +161,27 @@ class CityEnvironment {
         ease: Power4.easeInOut
       });
 
-    let i = 1;
-    setInterval(() => {
-      TweenMax.to(this.camera.position, 1,
-        {
-          ...angels[i],
-          yoyo: true,
-          delay: 0.05,
-          ease: Power4.easeInOut
-        });
-      // this.controls.target = new THREE.Vector3(targets[i].x, targets[i].y, targets[i].z);
-      TweenMax.to(this.controls.target, 1,
-        {
-          ...targets[i],
-          yoyo: true,
-          delay: 0.05,
-          ease: Power4.easeInOut
-        });
-      // this.camera.lookAt(new THREE.Vector3(targets[i].x , targets[i].y ,targets[i].z));
-      i++;
-      if (i === 5) { i = 0; }
-    }, 2000);
+    // let i = 1;
+    // setInterval(() => {
+    //   TweenMax.to(this.camera.position, 1,
+    //     {
+    //       ...angels[i],
+    //       yoyo: true,
+    //       delay: 0.05,
+    //       ease: Power4.easeInOut
+    //     });
+    //   // this.controls.target = new THREE.Vector3(targets[i].x, targets[i].y, targets[i].z);
+    //   TweenMax.to(this.controls.target, 1,
+    //     {
+    //       ...targets[i],
+    //       yoyo: true,
+    //       delay: 0.05,
+    //       ease: Power4.easeInOut
+    //     });
+    //   // this.camera.lookAt(new THREE.Vector3(targets[i].x , targets[i].y ,targets[i].z));
+    //   i++;
+    //   if (i === 5) { i = 0; }
+    // }, 2000);
   }
 
   setupScene() {
