@@ -47,7 +47,7 @@ class CityEnvironment {
     this.lightFront = new THREE.SpotLight(0xFFFFFF, 20, 10);
     this.lightBack = new THREE.PointLight(0xFFFFFF, 0.5);
     // this.spotLightHelper = new THREE.SpotLightHelper(this.lightFront);
-    this.cameraPointLight = new THREE.PointLight(0xffffff);
+    this.cameraPointLight = new THREE.PointLight(0xffffff, 8, 15);
 
     this.buildingsColorMaterial = new THREE.MeshStandardMaterial({
       color: projectVariables.buildingsColor,
