@@ -174,7 +174,7 @@ class CityEnvironment {
 
 
   setupCamera() {
-    this.camera.position.set(4, 5, 12);
+    this.camera.position.set(4, 12, 12);
   }
   setupScene() {
     this.scene.background = this.backgroundColor;
