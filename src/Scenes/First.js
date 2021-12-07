@@ -15,7 +15,7 @@ const projectVariables = {
   Fog: {
     Color: "#FF6F48",
     Near: 12,
-    Far: 16
+    Far: 20
   },
   Buildings: {
     Color: "#020205",
@@ -62,10 +62,10 @@ const buildingSegments = 2;
 const snowParticles = 300;
 const snowParticlesSpread = 5;
 let createCarPos = true;
-const mouse = new THREE.Vector2();
-const raycaster = new THREE.Raycaster();
-let INTERSECTED;
-let intersected;
+// const mouse = new THREE.Vector2();
+// const raycaster = new THREE.Raycaster();
+// let INTERSECTED;
+// let intersected;
 
 class CityEnvironment {
   copyToClipboard(text) {
@@ -100,6 +100,8 @@ class CityEnvironment {
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
     this.camera = new THREE.PerspectiveCamera(20, this.container.innerWidth / this.container.innerHeight, 1, 200);
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
+    this.controls.autoRotate = true;
+    this.controls.autoRotateSpeed = 0.7;
 
     this.backgroundColor = new THREE.Color(projectVariables.Background.Color);
     this.fog = new THREE.Fog(projectVariables.Fog.Color, projectVariables.Fog.Near, projectVariables.Fog.Far);
@@ -172,7 +174,7 @@ class CityEnvironment {
 
 
   setupCamera() {
-    this.camera.position.set(-22, 25, 20);
+    this.camera.position.set(4, 5, 12);
   }
   setupScene() {
     this.scene.background = this.backgroundColor;
@@ -181,6 +183,7 @@ class CityEnvironment {
     // this.scene.add(this.spotLightHelper);
     this.scene.add(this.ambientLight);
     this.scene.add(this.backLight);
+    this.scene.add(this.frontLight);
     this.scene.add(this.cameraLight);
     this.scene.add(this.city);
   }
@@ -220,32 +223,29 @@ class CityEnvironment {
     fog.addColor(projectVariables.Fog, 'Color');
     fog.add(projectVariables.Fog, 'Near', 0, 50);
     fog.add(projectVariables.Fog, 'Far', 0, 300);
-    fog.open();
+    // fog.open();
 
     const snow = this.gui.addFolder('Snow');
     snow.addColor(projectVariables.Snow, 'Color');
     snow.add(projectVariables.Snow, 'RotationSpeedX', -0.1, 0.1);
     snow.add(projectVariables.Snow, 'RotationSpeedY', -0.1, 0.1);
-    snow.open();
 
     const lines = this.gui.addFolder('Lines');
     lines.addColor(projectVariables.Lines, 'Color');
-    lines.add(projectVariables.Lines, 'TravelTimeX', 0, 1000);
-    lines.add(projectVariables.Lines, 'TravelTimeY', 0, 1000);
-    lines.open();
+    // lines.add(projectVariables.Lines, 'TravelTimeX', 0, 1000);
+    // lines.add(projectVariables.Lines, 'TravelTimeY', 0, 1000);
 
+    const buildings = this.gui.addFolder('Buildings');
+    buildings.addColor(projectVariables.Buildings, 'Color');
+    buildings.addColor(projectVariables.Buildings, 'WireframeColor');
+    buildings.add(projectVariables.Buildings, 'Opacity', 0, 1);
+    buildings.add(projectVariables.Buildings, 'WireframeOpacity', 0, 1);
+    buildings.add(projectVariables.Buildings, 'Roughness', 0, 1, 0.01);
+    buildings.add(projectVariables.Buildings, 'Metalness', 0, 1, 0.01);
+    // buildings.add(projectVariables.Buildings, 'GrowSpeed', 0, 100);
 
-    // this.gui.addColor(projectVariables, 'fogColor');
+    this.gui.close();
 
-    // this.gui.addColor(projectVariables, 'buildingsColor');
-
-    // this.gui.addColor(projectVariables, 'buildingsWireframeColor');
-    // this.gui.add(projectVariables, 'buildingsWireframeOpacity', 0, 1, 0.01);
-
-    // this.gui.addColor(projectVariables, 'snowParticleColor');
-    // this.gui.addColor(projectVariables, 'lineParticlesColor');
-
-    // this.gui.addColor(projectVariables, 'groundColor');
   };
 
 
@@ -275,7 +275,7 @@ class CityEnvironment {
       buildingFloorMesh.scale.y = 0.05;//+mathRandom(0.5);
       buildingMesh.scale.y = buildingSpec.scale.y;
 
-      gsap.to(
+      this.buildingsTween = gsap.to(
         buildingMesh.scale,
         {
           y: buildingSpec.transform.scale.y,
@@ -398,6 +398,10 @@ class CityEnvironment {
     this.fog.far = projectVariables.Fog.Far;
 
     this.buildingsColorMaterial.color = new THREE.Color(projectVariables.Buildings.Color);
+    this.buildingsColorMaterial.opacity = projectVariables.Buildings.Opacity;
+    this.buildingsColorMaterial.roughness = projectVariables.Buildings.Roughness;
+    this.buildingsColorMaterial.metalness = projectVariables.Buildings.Metalness;
+
     this.buildingsWireframeMaterial.color = new THREE.Color(projectVariables.Buildings.WireframeColor);
     this.buildingsWireframeMaterial.opacity = projectVariables.Buildings.WireframeOpacity;
 
@@ -405,29 +409,112 @@ class CityEnvironment {
     this.groundMaterial.color = new THREE.Color(projectVariables.Ground.Color);
     this.lineMaterial.color = new THREE.Color(projectVariables.Lines.Color);
 
-    // this.lineTweenX.d
-    this.lineTweenX.duration(0);
-    this.lineTweenY.duration(1000);
+    // this.lineTweenX.duration(0);
+    // this.lineTweenY.duration(1000);
   }
+  // startCameraTour() {
+  // gsap.to(this.camera.position,
+  //   {
+  //     ...{ x: 4, y: 5, z: 12 },
+  //     yoyo: true,
+  //     delay: 0,
+  //     duration: 2,
+  //     ease: Power4.easeIn
+  //   });
+  // // this.controls.target = new THREE.Vector3(targets[i].x, targets[i].y, targets[i].z);
+  // gsap.to(this.controls.target,
+  //   {
+  //     ...{ x: 0, y: 0, z: 0 },
+  //     yoyo: true,
+  //     delay: 0,
+  //     duration: 2,
+  //     ease: Power4.easeIn
+  //   });
+
+  // let i = 1;
+  // setInterval(() => {
+  //   gsap.to(this.camera.position, 
+  //     {
+  //       ...angels[i],
+  //       yoyo: true,
+  //       delay: 0.05,
+  //       duration: 1,
+  //       ease: Power4.easeInOut
+  //     });
+  //   // this.controls.target = new THREE.Vector3(targets[i].x, targets[i].y, targets[i].z);
+  //   gsap.to(this.controls.target, 
+  //     {
+  //       ...targets[i],
+  //       yoyo: true,
+  //       delay: 0.05,
+  //       duration: 1,
+  //       ease: Power4.easeInOut
+  //     });
+  //   // this.camera.lookAt(new THREE.Vector3(targets[i].x , targets[i].y ,targets[i].z));
+  //   i++;
+  //   if (i === 5) { i = 0; }
+  // }, 2000);
+  // }
   startCameraTour() {
     document.getElementById('exploreBox').style.display = "none";
+    const textBox = document.getElementById('exploreTextBox');
     document.getElementById('logBox').style.display = "flex";
+    this.controls.autoRotate = false;
 
     const angels = [
-      { x: -4.727919694453478, y: 9.610596400995368, z: -4.902635459459849 },
-      { x: -9.387513949808628, y: 4.361033650928754, z: -3.016824226668273 },
-      { x: 4.892292649386681, y: 1.0158754255090539, z: -13.37444157625071 },
-      { x: 5.041919011118039, y: 4.625301222630572, z: -13.364091819438183 },
-      { x: 16.909804496215823, y: 3.684319169448478, z: 12.101808557392527 }
-    ];
-    const targets = [
-      { x: -0.026530800744345752, y: 0.19071215594007832, z: 0.3133981088417902 },
-      { x: 4.14079208500648, y: -0.22234476570269976, z: 0.44038109069180714 },
-      { x: 2.1377918912910956, y: 0.12282329636523791, z: 1.250521281444583 },
-      { x: 3.141701826927174, y: -0.4143356276611831, z: 1.2606705852077156 },
-      { x: 2.570531488236015, y: 0.8916933410752306, z: 1.098608468993924 }
+      { "x": 10.581127803793587, "y": 2.4053103895290553, "z": 9.780443097700175 },
+      { "x": 4.422774829614051, "y": 3.5687682908489045, "z": -3.024039589524508 },
+      { "x": -7.233989649898843, "y": 2.483491045754508, "z": 12.365725861786409 },
+      { "x": -13.563310926972537, "y": 2.808918891842155, "z": 1.5586130631078392 },
+      { "x": 3.116748736134197, "y": 2.940980931715588, "z": 5.785337046866044 },
+
+      { "x": 14.421381886504783, "y": 1.4598161255912756, "z": 2.9230083800360025 },
+      { "x": 10.056545793157643, "y": 2.7311705093715126, "z": -4.3175728376978855 },
+      { "x": 6.815814844712406, "y": 3.1964614075057622, "z": -5.828731988246063 },
+      { "x": 3.27509581905697, "y": 3.600410428770032, "z": -1.2362642277908664 },
+      { "x": -7.92810040830757, "y": 3.2935354571128532, "z": 4.201868678944733 },
+
+      { "x": -2.097453687463588, "y": 16.832422962509387, "z": 3.514360346860156 },
+      { "x": 0.7849379154868878, "y": 17.85457307897917, "z": -3.541998523796724 },
+      { "x": -7.971162589310405, "y": 15.385527420131014, "z": 7.491219637870431 },
 
     ];
+    const targets = [
+      { "x": -0.9394979113197658, "y": -1.6862962769479128, "z": 0.7752736218402716 },
+      { "x": -0.12126875467954178, "y": 1.1781203754743534, "z": 2.8405521787988532 },
+      { "x": -1.1676297901405868, "y": 0.6743135381791854, "z": 5.188850067446561 },
+      { "x": -4.183416911836627, "y": 0.551828974653207, "z": 5.958733152247803 },
+      { "x": -2.27035434367292, "y": 0.6536485175539581, "z": 1.8822409036376972 },
+
+      { "x": 3.882875606987571, "y": 0.7676996087892374, "z": -2.225305274317599 },
+      { "x": 3.9567612649379744, "y": 1.5955873942366798, "z": -1.8346244247526655 },
+      { "x": 3.412117744447448, "y": 1.9436864486131107, "z": -3.6872912996073386 },
+      { "x": 2.150887139940841, "y": 3.180425783768118, "z": -2.0219708820352187 },
+      { "x": -5.131876398333591, "y": 1.741441019390957, "z": 0.4728378333489537 },
+
+      { "x": -3.9061847114772825, "y": 0.9669744172355098, "z": 2.8192165726979375 },
+      { "x": 4.0942219659693695, "y": 1.3962477847972616, "z": -2.429206337319634 },
+      { "x": 1.1758056196863653, "y": -1.5153758652279934, "z": -0.08303209035302216 }
+    ];
+    const text = [
+      "Metaverse & GameFi",
+      "How we make it happen",
+      "Levelling Up NFTs",
+      "Royalties & Rewards",
+      "The Marketplace",
+
+      "Q4 2021: MVP launch",
+      "Q1 2022",
+      "Q2 2022",
+      "Q3 2022",
+      "Q4 2022",
+
+      "Team",
+      "Advisers",
+      "Final",
+    ];
+
+
 
     gsap.to(this.camera.position,
       {
@@ -446,31 +533,36 @@ class CityEnvironment {
         duration: 1,
         ease: Power4.easeInOut
       });
+    textBox.innerHTML = text[0];
 
-    // let i = 1;
-    // setInterval(() => {
-    //   gsap.to(this.camera.position, 
-    //     {
-    //       ...angels[i],
-    //       yoyo: true,
-    //       delay: 0.05,
-    //       duration: 1,
-    //       ease: Power4.easeInOut
-    //     });
-    //   // this.controls.target = new THREE.Vector3(targets[i].x, targets[i].y, targets[i].z);
-    //   gsap.to(this.controls.target, 
-    //     {
-    //       ...targets[i],
-    //       yoyo: true,
-    //       delay: 0.05,
-    //       duration: 1,
-    //       ease: Power4.easeInOut
-    //     });
-    //   // this.camera.lookAt(new THREE.Vector3(targets[i].x , targets[i].y ,targets[i].z));
-    //   i++;
-    //   if (i === 5) { i = 0; }
-    // }, 2000);
+    let i = 1;
+    setInterval(() => {
+      gsap.to(this.camera.position,
+        {
+          ...angels[i],
+          yoyo: true,
+          delay: 0.05,
+          duration: 1,
+          ease: Power4.easeInOut
+        });
+      // this.controls.target = new THREE.Vector3(targets[i].x, targets[i].y, targets[i].z);
+      gsap.to(this.controls.target,
+        {
+          ...targets[i],
+          yoyo: true,
+          delay: 0.05,
+          duration: 1,
+          ease: Power4.easeInOut
+        });
+      textBox.innerHTML = text[i];
+      // this.camera.lookAt(new THREE.Vector3(targets[i].x , targets[i].y ,targets[i].z));
+      i++;
+      if (i === 13) { i = 0; }
+    }, 3000);
+
   }
+
+
   logCamera() {
     document.getElementById('cameraSpec').innerHTML = `location: {x: ${this.camera.position.x}, y: ${this.camera.position.y}, z: ${this.camera.position.z}}`;
     document.getElementById('cameraSpec').innerHTML += `<br></br>`;
